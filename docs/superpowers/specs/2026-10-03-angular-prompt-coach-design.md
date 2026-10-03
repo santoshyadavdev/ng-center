@@ -30,9 +30,11 @@ MCP server, VS Code extension, runtime error capture, AI error fixes, any hosted
 
 ## 2. Architecture
 
-TypeScript pnpm monorepo, Node 22+. Each package has one responsibility and a typed public interface.
+TypeScript, Node 22.13+ (uses built-in `node:sqlite`). Each module has one responsibility and a typed public interface.
 
-| Package | Responsibility | Depends on |
+**Packaging decision (2026-10-03):** v1 ships as a single `ngcoach` package with one folder per module (`src/core`, `src/ingest`, `src/context`, `src/rules`, `src/llm`, `src/analyze`, `src/share`, `src/cli`). Modules import each other only through their `index.ts`. The folders get split into `@ngcoach/*` pnpm workspace packages when the MCP server and VS Code extension need to reuse them.
+
+| Module (future package) | Responsibility | Depends on |
 |---|---|---|
 | `@ngcoach/core` | Shared types: `PromptEvent`, `ProjectProfile`, `Finding`, `PatternSummary` | — |
 | `@ngcoach/ingest` | One adapter per agent. Discovers log locations and parses them into `PromptEvent`s incrementally | core |
