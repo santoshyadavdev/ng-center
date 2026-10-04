@@ -59,7 +59,7 @@ export function buildProfile(repo: string): ProjectProfile {
   for (const file of listFiles(join(repo, 'src'), (n) => /\.(ts|html)$/.test(n), 2000)) {
     const text = readFileSync(file, 'utf8');
     ngModule ||= NG_MODULE.test(text);
-    signals ||= SIGNAL_API.test(text);
+    signals ||= file.endsWith('.ts') && SIGNAL_API.test(text);
     controlFlow ||= CONTROL_FLOW.test(text);
     zonelessProvider ||= ZONELESS_PROVIDER.test(text);
   }

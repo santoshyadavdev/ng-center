@@ -62,3 +62,7 @@ test('non-semver spec without node_modules still records Angular with an unknown
     zoneless: true,
   });
 });
+
+test('signal detection ignores HTML templates such as <input (keyup)=…>', () => {
+  expect(buildProfile(repo('ng16-modules')).signals).toBe(false);
+});
