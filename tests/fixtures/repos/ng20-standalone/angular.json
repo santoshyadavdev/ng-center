@@ -1,0 +1,1 @@
+{ "projects": { "app": { "architect": { "build": { "builder": "@angular/build:application" } } } } }

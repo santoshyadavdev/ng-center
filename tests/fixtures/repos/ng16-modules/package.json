@@ -1,0 +1,5 @@
+{
+  "name": "ng16",
+  "dependencies": { "@angular/core": "~16.2.0", "zone.js": "~0.13.0" },
+  "devDependencies": { "karma": "~6.4.0", "jasmine-core": "~4.6.0" }
+}
