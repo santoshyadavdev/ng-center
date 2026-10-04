@@ -26,6 +26,7 @@ export interface PromptEvent {
 export type TestRunner = 'vitest' | 'jest' | 'karma' | 'none';
 
 export interface ProjectProfile {
+  /** Semver string; 'unknown' if Angular is a dependency but its version cannot be resolved; null if not Angular. */
   angularVersion: string | null;
   standalone: boolean;
   signals: boolean;
