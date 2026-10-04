@@ -17,3 +17,11 @@ test('reads user/assistant messages with session cwd and skips malformed', () =>
   ]);
   expect(turns[0]).toMatchObject({ agent: 'copilot', sessionId: 'sess-b', cwd: '/work/admin' });
 });
+
+test('does not emit injected system notifications or canvas context as prompts', () => {
+  const { turns } = copilot.read(copilot.discover(home)[0]!);
+  const texts = turns.map((t) => t.text);
+  expect(texts.some((t) => t.includes('system_notification') || t.includes('Agent "explore" completed'))).toBe(false);
+  expect(texts.some((t) => t.includes('canvas'))).toBe(false);
+  expect(turns.filter((t) => t.role === 'user')).toHaveLength(1);
+});
