@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, expect, test } from 'vitest';
 import { main } from '../../src/cli/main.js';
@@ -84,4 +84,24 @@ test('bad input exits with 2 and usage', () => {
   out = [];
   expect(run('help')).toBe(0);
   expect(out.join('')).toContain('Usage: ngcoach');
+});
+
+test('--repo accepts relative paths, trailing slashes and subdirectories of the project', () => {
+  const projectDir = join(env.NGCOACH_AGENT_HOME!, '.claude', 'projects', '-work-ng20-src-app');
+  mkdirSync(projectDir, { recursive: true });
+  const ts = new Date().toISOString();
+  const cwd = join(ng20, 'src', 'app');
+  const lines = [
+    { type: 'user', sessionId: 's2', timestamp: ts, cwd, message: { role: 'user', content: 'In Angular 20, loop with *ngFor' } },
+    { type: 'assistant', sessionId: 's2', timestamp: ts, cwd, message: { role: 'assistant', content: [{ type: 'text', text: 'Done.' }] } },
+  ];
+  writeFileSync(join(projectDir, 's2.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  run('scan');
+
+  for (const repo of [relative(process.cwd(), ng20), relative(process.cwd(), cwd) || '.', `${ng20}/`, `${cwd}/`]) {
+    out = [];
+    expect(run('report', '--json', '--repo', repo)).toBe(0);
+    const report = JSON.parse(out.join(''));
+    expect(report.prompts.map((p: { repo: string }) => p.repo)).toEqual([ng20, ng20]);
+  }
 });

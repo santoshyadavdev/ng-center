@@ -1,6 +1,8 @@
 import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { agentHome, dbPath, ngcoachHome } from '../config/paths.js';
+import { projectRoot } from '../context/index.js';
 import type { AgentId } from '../core/index.js';
 import { ADAPTERS } from '../ingest/index.js';
 import { scan } from '../pipeline/scan.js';
@@ -72,10 +74,12 @@ function cmdReport(args: string[], write: Write, env: Env): number {
   const limit = values.limit === undefined ? 10 : Number(values.limit);
   if (!Number.isInteger(limit) || limit < 1) throw new UsageError(`Invalid --limit "${values.limit}".`);
   const since = parseSince(values.since, new Date());
+  // Events are stored under their project root (see projectRoot), so resolve --repo the same way.
+  const repo = values.repo === undefined ? undefined : projectRoot(resolve(values.repo).replace(/(?<=.)[\\/]+$/, ''));
 
   const store = new Store(dbPath(env));
   try {
-    const events = store.listEvents({ repo: values.repo, agent: values.agent as AgentId | undefined, since });
+    const events = store.listEvents({ repo, agent: values.agent as AgentId | undefined, since });
     const ranked = rankEvents(events, limit);
     if (values.html) {
       writeFileSync(values.html, renderHtml(ranked));
