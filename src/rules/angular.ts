@@ -76,7 +76,7 @@ export const ANGULAR_RULES: Rule[] = [
     guidance: 'Say which forms API you want: reactive (FormGroup), template-driven (ngModel) or signal forms.',
     requiresAngular: true,
     match: (text) => {
-      const hit = text.match(/\bforms?\b/i)?.[0];
+      const hit = text.replace(/\bin (the )?forms? of\b/gi, '').match(/\bforms?\b/i)?.[0];
       if (!hit) return null;
       return /\b(reactive|template[- ]driven|signal forms?|FormGroup|FormControl|ngModel)\b/i.test(text) ? null : hit;
     },

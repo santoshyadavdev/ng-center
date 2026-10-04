@@ -68,3 +68,8 @@ test.each<[string, boolean]>([
 ])('ng/standalone needs NgModule context: %s', (text, fires) => {
   expect(fired(text, ANGULAR_20).includes('ng/standalone')).toBe(fires);
 });
+
+test('ng/forms-kind ignores "in the form of"', () => {
+  expect(fired('Angular 20: return the data in the form of a list', ANGULAR_20)).not.toContain('ng/forms-kind');
+  expect(fired('Angular 20: return it in the form of a list and add a login form', ANGULAR_20)).toContain('ng/forms-kind');
+});
