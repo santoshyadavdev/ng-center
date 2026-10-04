@@ -49,3 +49,11 @@ test.each<[string, string]>([
 test('migration words need word boundaries', () => {
   expect(fired('Angular 20: the unremovable banner needs *ngIf', ANGULAR_20)).toContain('ng/control-flow');
 });
+
+test.each<[string, Partial<ProjectProfile>, string]>([
+  ['Angular 20: wrap the list in *ngIf', { controlFlow: false }, 'ng/control-flow'],
+  ['Angular 20: add an @Input() for the title', { signals: false }, 'ng/signal-io'],
+])('follows repo conventions: %s', (text, override, ruleId) => {
+  expect(fired(text, ANGULAR_20)).toContain(ruleId);
+  expect(fired(text, { ...ANGULAR_20, ...override })).not.toContain(ruleId);
+});
