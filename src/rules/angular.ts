@@ -15,6 +15,10 @@ const unlessMigrating =
   (text, event, profile) =>
     isMigration(text) ? null : match(text, event, profile);
 
+/** NgModule-specific wording; a bare "declarations" (e.g. "type declarations") is not enough. */
+const NG_MODULE =
+  /\bng-?modules?\b|\b[\w-]+\.module(\.ts)?\b|\bdeclarations\s*(:|\[|array\b)|\b(in|to|into|from)\s+(the\s+)?declarations\b(?!\.)/i;
+
 const RUNNER_WORDS: Record<Exclude<TestRunner, 'none'>, RegExp> = {
   vitest: /\bvitest\b/i,
   jest: /\bjest\b/i,
@@ -37,7 +41,7 @@ export const ANGULAR_RULES: Rule[] = [
     guidance: 'This project is standalone. Ask for standalone components with `imports: [...]`, not NgModules.',
     angularRange: '>=15',
     when: (p) => p.standalone,
-    match: first(/\b(NgModule|app\.module|declarations)\b/),
+    match: first(NG_MODULE),
     message: (ev, p) => `Mentioned ${ev}, but this Angular ${p.angularVersion} project uses standalone components.`,
   }),
   patternRule({

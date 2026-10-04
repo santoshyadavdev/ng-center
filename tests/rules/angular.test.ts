@@ -57,3 +57,14 @@ test.each<[string, Partial<ProjectProfile>, string]>([
   expect(fired(text, ANGULAR_20)).toContain(ruleId);
   expect(fired(text, { ...ANGULAR_20, ...override })).not.toContain(ruleId);
 });
+
+test.each<[string, boolean]>([
+  ['Angular 20: fix the type declarations for the API client', false],
+  ['Angular 20: update declarations.d.ts', false],
+  ['Angular 20: create an ngmodule for the cart', true],
+  ['Angular 20: add CartComponent to the declarations', true],
+  ['Angular 20: put it in declarations: [CartComponent]', true],
+  ['Angular 20: register it in App.Module.ts', true],
+])('ng/standalone needs NgModule context: %s', (text, fires) => {
+  expect(fired(text, ANGULAR_20).includes('ng/standalone')).toBe(fires);
+});
