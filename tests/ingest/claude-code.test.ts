@@ -26,3 +26,11 @@ test('reads prompts, ignores tool results/sidechains/commands, counts malformed 
   expect(events).toHaveLength(1);
   expect(events[0]).toMatchObject({ outcome: 'retried', followUps: ['no, use signals for the list'] });
 });
+
+test('skips injected meta, compact-summary and interruption records', () => {
+  const { turns } = claudeCode.read(claudeCode.discover(home)[0]!);
+  const texts = turns.map((t) => t.text).join('\n');
+  expect(texts).not.toContain('injected skill instructions');
+  expect(texts).not.toContain('continued from a previous conversation');
+  expect(texts).not.toContain('[Request interrupted by user');
+});

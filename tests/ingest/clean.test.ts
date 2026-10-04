@@ -37,3 +37,8 @@ test('cleanText strips IDE and canvas context blocks', () => {
 test('wrapped corrections are still detected after cleaning', () => {
   expect(isCorrection(cleanText('<ide_opened_file>x</ide_opened_file> no, use signals'))).toBe(true);
 });
+
+test('isNoise flags Claude interruption markers', () => {
+  expect(isNoise('[Request interrupted by user]')).toBe(true);
+  expect(isNoise('[Request interrupted by user for tool use]')).toBe(true);
+});

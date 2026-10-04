@@ -4,7 +4,16 @@ export function cleanText(text: string): string {
   return text.replace(INJECTED_BLOCK, '').trim();
 }
 
-const NOISE_PREFIXES = ['<command-', '<local-command', 'Caveat:', '<parameter name=', '<system_notification', '<cross_session_message', '<canvas-context'];
+const NOISE_PREFIXES = [
+  '<command-',
+  '<local-command',
+  'Caveat:',
+  '<parameter name=',
+  '<system_notification',
+  '<cross_session_message',
+  '<canvas-context',
+  '[Request interrupted by user',
+];
 const TERMINAL_ESCAPE = /^(\u001b\[)?<\d+;\d+;\d+[Mm]/;
 
 export function isNoise(text: string): boolean {

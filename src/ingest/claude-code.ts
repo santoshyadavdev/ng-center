@@ -14,6 +14,8 @@ const MessageRecord = z.object({
   timestamp: z.string(),
   cwd: z.string().optional(),
   isSidechain: z.boolean().optional(),
+  isMeta: z.boolean().optional(),
+  isCompactSummary: z.boolean().optional(),
   message: z.object({ content: z.union([z.string(), z.array(Part)]) }),
 });
 
@@ -40,7 +42,7 @@ export function readClaudeCode(source: string): ReadResult {
       return;
     }
     const rec = parsed.data;
-    if (rec.isSidechain) return;
+    if (rec.isSidechain || rec.isMeta || rec.isCompactSummary) return;
 
     const content = rec.message.content;
     if (rec.type === 'user' && Array.isArray(content) && content.some((p) => p.type === 'tool_result')) return;
