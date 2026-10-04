@@ -69,14 +69,14 @@ export function scan(opts: ScanOptions): ScanResult {
         const mtime = mtimeOf(source);
         if (store.getCheckpoint(source) === mtime) continue;
         const read = adapter.read(source);
-        skipped += read.skipped;
         const entries = buildEvents(read.turns).map((event) => ({
           event,
           findings: runRules(event, profileFor(event.repo)),
         }));
         store.replaceSource(source, entries);
-        events += entries.length;
         store.setCheckpoint(source, adapter.id, mtime);
+        events += entries.length;
+        skipped += read.skipped;
       } catch (err) {
         errors.push(`${source}: ${message(err)}`);
       }
@@ -90,7 +90,12 @@ export function scan(opts: ScanOptions): ScanResult {
       error: errors.length ? errors.join('; ') : null,
       scannedAt: now().toISOString(),
     };
-    store.setAdapterStats(stats);
+    try {
+      store.setAdapterStats(stats);
+    } catch (err) {
+      const failure = `stats: ${message(err)}`;
+      stats.error = stats.error ? `${stats.error}; ${failure}` : failure;
+    }
     results.push(stats);
   }
   return { adapters: results };

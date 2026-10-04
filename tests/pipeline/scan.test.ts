@@ -145,3 +145,51 @@ test('a re-read source with fewer events leaves no stale rows', () => {
   expect(events.map((e) => e.text)).toEqual(['explain the router setup in this app please']);
   expect(events[0]?.findings).toEqual([]);
 });
+
+test('a source that fails is not counted or checkpointed, and is re-read on the next scan', () => {
+  const store = new Store(':memory:');
+  const calls: string[] = [];
+  const adapter = fakeAdapter(
+    { '/logs/a.jsonl': () => ({ turns: [turn('a', 0, 'user', 'explain the router setup in this app')], skipped: 2 }) },
+    calls,
+  );
+  const replace = store.replaceSource.bind(store);
+  let fail = true;
+  store.replaceSource = (source, entries) => {
+    if (fail) throw new Error('disk I/O error');
+    replace(source, entries);
+  };
+  const opts = { store, adapters: [adapter], home: '/home', profile: () => ANGULAR_20, mtime: () => 1, now: NOW };
+
+  const first = scan(opts);
+  expect(first.adapters[0]).toMatchObject({ events: 0, skipped: 0, error: '/logs/a.jsonl: disk I/O error' });
+  expect(store.getCheckpoint('/logs/a.jsonl')).toBeNull();
+
+  fail = false;
+  const second = scan(opts);
+  expect(calls).toEqual(['/logs/a.jsonl', '/logs/a.jsonl']);
+  expect(second.adapters[0]).toMatchObject({ events: 1, skipped: 2, error: null });
+  expect(store.getCheckpoint('/logs/a.jsonl')).toBe(1);
+});
+
+test('a failure saving adapter stats does not abort the remaining adapters', () => {
+  const store = new Store(':memory:');
+  const first = { ...fakeAdapter({ '/logs/a.jsonl': () => ({ turns: [], skipped: 0 }) }, []), id: 'cursor' as const };
+  const second = fakeAdapter(
+    { '/logs/b.jsonl': () => ({ turns: [turn('b', 0, 'user', 'explain the router setup in this app')], skipped: 0 }) },
+    [],
+  );
+  const save = store.setAdapterStats.bind(store);
+  store.setAdapterStats = (s) => {
+    if (s.adapter === 'cursor') throw new Error('database is locked');
+    save(s);
+  };
+
+  const result = scan({ store, adapters: [first, second], home: '/home', profile: () => ANGULAR_20, mtime: () => 1, now: NOW });
+
+  expect(result.adapters.map((a) => [a.adapter, a.error])).toEqual([
+    ['cursor', 'stats: database is locked'],
+    ['claude-code', null],
+  ]);
+  expect(store.listEvents()).toHaveLength(1);
+});
