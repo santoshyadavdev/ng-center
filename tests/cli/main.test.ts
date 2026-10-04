@@ -110,3 +110,12 @@ test('--repo accepts relative paths, trailing slashes and subdirectories of the 
     expect(report.prompts.map((p: { repo: string }) => p.repo)).toEqual([ng20, ng20]);
   }
 });
+
+test('I/O errors print one ngcoach: line and exit 1', () => {
+  run('scan');
+  out = [];
+  expect(run('report', '--html', '/nonexistent/dir/x.html')).toBe(1);
+  const text = out.join('');
+  expect(text).toMatch(/^ngcoach: .*ENOENT.*\/nonexistent\/dir\/x\.html.*\n$/);
+  expect(text.trim().split('\n')).toHaveLength(1);
+});

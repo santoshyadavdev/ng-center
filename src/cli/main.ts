@@ -149,6 +149,11 @@ export function main(argv: string[], write: Write = (s) => void process.stdout.w
       write(`${(err as Error).message}\n\n${USAGE}`);
       return 2;
     }
+    // Filesystem and SQLite errors carry a `code`; report them briefly. Anything else is a bug: keep the stack.
+    if (err instanceof Error && typeof (err as { code?: unknown }).code === 'string') {
+      write(`ngcoach: ${err.message.split('\n')[0]}\n`);
+      return 1;
+    }
     throw err;
   }
 }
