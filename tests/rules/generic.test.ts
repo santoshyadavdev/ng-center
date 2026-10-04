@@ -18,6 +18,17 @@ describe('generic rules', () => {
     expect(fired(text)).toEqual(expected);
   });
 
+  test.each(['sounds good', 'yes please', 'looks good', 'B', 'are you there ?', 'ok', 'LGTM!', 'yes, go ahead', 'thanks', '2', 'option 3', 'continue', 'proceed please'])(
+    'short conversational reply is not a vague request: %s',
+    (text) => {
+      expect(fired(text)).not.toContain('gen/vague-request');
+    },
+  );
+
+  test.each(['fix it', 'make it faster', 'update the tests', 'it is broken'])('short request is still vague: %s', (text) => {
+    expect(fired(text)).toContain('gen/vague-request');
+  });
+
   test('repeated corrections', () => {
     expect(fired('explain how routing works in this app please', ['no', 'still wrong'])).toEqual([
       'gen/repeated-correction',
