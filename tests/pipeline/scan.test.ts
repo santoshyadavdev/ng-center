@@ -1,0 +1,107 @@
+import { expect, test } from 'vitest';
+import type { ProjectProfile, RawTurn } from '../../src/core/index.js';
+import type { Adapter } from '../../src/ingest/index.js';
+import { scan } from '../../src/pipeline/scan.js';
+import { Store } from '../../src/store/index.js';
+import { ANGULAR_20 } from '../rules/helpers.js';
+
+const turn = (sessionId: string, index: number, role: RawTurn['role'], text: string): RawTurn => ({
+  agent: 'claude-code',
+  sessionId,
+  index,
+  timestamp: `2026-10-03T08:00:0${index}.000Z`,
+  role,
+  text,
+  cwd: '/work/app',
+});
+
+function fakeAdapter(reads: Record<string, () => { turns: RawTurn[]; skipped: number }>, calls: string[]): Adapter {
+  return {
+    id: 'claude-code',
+    discover: () => Object.keys(reads),
+    read: (source) => {
+      calls.push(source);
+      return reads[source]!();
+    },
+  };
+}
+
+const NOW = () => new Date('2026-10-03T09:00:00.000Z');
+
+test('ingests events, applies rules with the repo profile and records stats', () => {
+  const store = new Store(':memory:');
+  const calls: string[] = [];
+  const profiles: string[] = [];
+  const adapter = fakeAdapter(
+    {
+      '/logs/a.jsonl': () => ({
+        turns: [turn('a', 0, 'user', 'Angular 20: wrap the list in *ngIf'), turn('a', 1, 'assistant', 'ok')],
+        skipped: 1,
+      }),
+      '/logs/b.jsonl': () => {
+        throw new Error('bad file');
+      },
+    },
+    calls,
+  );
+  const profile = (repo: string): ProjectProfile => (profiles.push(repo), ANGULAR_20);
+
+  const result = scan({ store, adapters: [adapter], home: '/home', profile, mtime: () => 1, now: NOW });
+
+  expect(result.adapters).toEqual([
+    {
+      adapter: 'claude-code',
+      sources: 2,
+      events: 1,
+      skipped: 1,
+      error: '/logs/b.jsonl: bad file',
+      scannedAt: '2026-10-03T09:00:00.000Z',
+    },
+  ]);
+  expect(profiles).toEqual(['/work/app']);
+  const [event] = store.listEvents();
+  expect(event?.findings.map((f) => f.ruleId)).toEqual(['ng/control-flow']);
+  expect(store.listAdapterStats()).toEqual(result.adapters);
+});
+
+test('skips unchanged sources, re-reads changed ones, rebuild starts fresh', () => {
+  const store = new Store(':memory:');
+  const calls: string[] = [];
+  const adapter = fakeAdapter(
+    { '/logs/a.jsonl': () => ({ turns: [turn('a', 0, 'user', 'explain the router setup in this app')], skipped: 0 }) },
+    calls,
+  );
+  let mtime = 1;
+  const opts = { store, adapters: [adapter], home: '/home', mtime: () => mtime, now: NOW };
+
+  scan(opts);
+  scan(opts);
+  expect(calls).toHaveLength(1);
+
+  mtime = 2;
+  scan(opts);
+  expect(calls).toHaveLength(2);
+
+  scan({ ...opts, rebuild: true });
+  expect(calls).toHaveLength(3);
+  expect(store.listEvents()).toHaveLength(1);
+});
+
+test('an adapter whose discover throws is reported and others still run', () => {
+  const store = new Store(':memory:');
+  const broken: Adapter = {
+    id: 'cursor',
+    discover: () => {
+      throw new Error('no access');
+    },
+    read: () => ({ turns: [], skipped: 0 }),
+  };
+  const ok = fakeAdapter({ '/logs/a.jsonl': () => ({ turns: [turn('a', 0, 'user', 'hello there agent friend')], skipped: 0 }) }, []);
+
+  const result = scan({ store, adapters: [broken, ok], home: '/home', mtime: () => 1, now: NOW });
+
+  expect(result.adapters.map((a) => [a.adapter, a.error, a.events])).toEqual([
+    ['cursor', 'discover: no access', 0],
+    ['claude-code', null, 1],
+  ]);
+});
