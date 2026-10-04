@@ -108,3 +108,14 @@ test('write transactions take the write lock up front with begin immediate', () 
   store.saveEvent(ev('b'), []);
   expect(statements.filter((s) => s.startsWith('begin'))).toEqual(['begin immediate', 'begin immediate']);
 });
+
+test('countEvents counts in SQL with the same filters as listEvents', () => {
+  const store = new Store(':memory:');
+  store.saveEvent(ev('a'), []);
+  store.saveEvent(ev('b', { agent: 'cursor' }), []);
+  store.saveEvent(ev('c', { agent: 'cursor', repo: '/work/other' }), []);
+  expect(store.countEvents()).toBe(3);
+  expect(store.countEvents({ agent: 'cursor' })).toBe(2);
+  expect(store.countEvents({ agent: 'cursor', repo: '/work/other' })).toBe(1);
+  expect(store.countEvents({ agent: 'copilot' })).toBe(0);
+});

@@ -105,7 +105,7 @@ function cmdDoctor(write: Write, env: Env): number {
         healthy = false;
         status = `error  ${err instanceof Error ? err.message : String(err)}`;
       }
-      const stored = store.listEvents({ agent: adapter.id }).length;
+      const stored = store.countEvents({ agent: adapter.id });
       const last = stats.get(adapter.id);
       const lastScan = last ? `last scan ${last.scannedAt}` : 'never scanned';
       write(`${adapter.id.padEnd(12)} ${status}  ${plural(stored, 'stored event')}  ${lastScan}\n`);

@@ -69,6 +69,15 @@ interface EventRow {
   outcome: Outcome;
 }
 
+function whereClause(filter: EventFilter): { where: string; args: string[] } {
+  const where: string[] = [];
+  const args: string[] = [];
+  if (filter.repo) (where.push('repo = ?'), args.push(filter.repo));
+  if (filter.agent) (where.push('agent = ?'), args.push(filter.agent));
+  if (filter.since) (where.push('timestamp >= ?'), args.push(filter.since));
+  return { where: where.length ? `where ${where.join(' and ')}` : '', args };
+}
+
 export class Store {
   private readonly db: DatabaseSync;
 
@@ -95,12 +104,8 @@ export class Store {
   }
 
   listEvents(filter: EventFilter = {}): StoredEvent[] {
-    const where: string[] = [];
-    const args: string[] = [];
-    if (filter.repo) (where.push('repo = ?'), args.push(filter.repo));
-    if (filter.agent) (where.push('agent = ?'), args.push(filter.agent));
-    if (filter.since) (where.push('timestamp >= ?'), args.push(filter.since));
-    const sql = `select * from events ${where.length ? `where ${where.join(' and ')}` : ''} order by timestamp desc, id`;
+    const { where, args } = whereClause(filter);
+    const sql = `select * from events ${where} order by timestamp desc, id`;
     const rows = this.db.prepare(sql).all(...args) as unknown as EventRow[];
     const findingsStmt = this.db.prepare(
       'select rule_id, severity, message, evidence from findings where event_id = ? order by rowid',
@@ -118,6 +123,12 @@ export class Store {
         findingsStmt.all(r.id) as unknown as Array<{ rule_id: string; severity: Severity; message: string; evidence: string }>
       ).map((f) => ({ ruleId: f.rule_id, severity: f.severity, message: f.message, evidence: f.evidence })),
     }));
+  }
+
+  countEvents(filter: EventFilter = {}): number {
+    const { where, args } = whereClause(filter);
+    const row = this.db.prepare(`select count(*) as n from events ${where}`).get(...args) as { n: number };
+    return row.n;
   }
 
   getCheckpoint(source: string): number | null {
