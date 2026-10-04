@@ -108,7 +108,16 @@ export function readCursor(source: string): ReadResult {
       list.sort((a, b) => a.ts.localeCompare(b.ts) || a.bubbleId.localeCompare(b.bubbleId));
       const cwd = workspaceFolder(userDir, headers.get(composerId)?.workspaceId ?? null, folders);
       list.forEach((b, index) =>
-        turns.push({ agent: 'cursor', sessionId: composerId, index, timestamp: b.ts, role: b.role, text: b.text, cwd }),
+        turns.push({
+          agent: 'cursor',
+          sessionId: composerId,
+          index,
+          timestamp: b.ts,
+          role: b.role,
+          text: b.text,
+          cwd,
+          key: b.bubbleId,
+        }),
       );
     }
     return { turns, skipped };

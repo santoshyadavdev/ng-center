@@ -10,6 +10,8 @@ export interface RawTurn {
   role: 'user' | 'assistant';
   text: string;
   cwd: string | null;
+  /** Source-native turn id (e.g. Cursor bubbleId); used for event identity instead of `index` when set. */
+  key?: string;
 }
 
 export interface PromptEvent {

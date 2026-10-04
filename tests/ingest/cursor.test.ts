@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { pathToFileURL } from 'node:url';
 import { expect, test } from 'vitest';
 import { cursorUserDir, discoverCursor, readCursor } from '../../src/ingest/cursor.js';
+import { buildEvents } from '../../src/ingest/events.js';
 
 function makeCursorHome(platform: NodeJS.Platform) {
   const home = mkdtempSync(join(tmpdir(), 'ngc-cursor-'));
@@ -67,4 +68,20 @@ test('throws on an unexpected schema so doctor can report it', () => {
   const file = join(dir, 'state.vscdb');
   new DatabaseSync(file).close();
   expect(() => readCursor(file)).toThrow(/unexpected schema/);
+});
+
+test('event identity follows the bubbleId, not the sorted position', () => {
+  const { dbFile } = makeCursorHome('linux');
+  const before = buildEvents(readCursor(dbFile).turns).find((e) => e.text === 'Refactor the cart service');
+
+  const db = new DatabaseSync(dbFile);
+  db.prepare('insert into cursorDiskKV values (?, ?)').run(
+    'bubbleId:c1:b0',
+    JSON.stringify({ type: 1, text: 'Explain the cart service first', createdAt: '2026-10-03T07:00:00.000Z' }),
+  );
+  db.close();
+
+  const after = buildEvents(readCursor(dbFile).turns).find((e) => e.text === 'Refactor the cart service');
+  expect(after?.id).toBe(before?.id);
+  expect(readCursor(dbFile).turns.map((t) => t.key)).toEqual(['b0', 'b1', 'b2', 'b3']);
 });

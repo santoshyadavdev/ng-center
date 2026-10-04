@@ -47,7 +47,7 @@ export function buildEvents(turns: RawTurn[]): PromptEvent[] {
     for (const d of drafts) {
       const outcome: Outcome = d.followUps.length > 0 ? 'retried' : d.replied ? 'accepted' : 'abandoned';
       events.push({
-        id: stableId(d.first.agent, d.first.sessionId, d.first.index),
+        id: stableId(d.first.agent, d.first.sessionId, d.first.key ?? d.first.index),
         agent: d.first.agent,
         sessionId: d.first.sessionId,
         timestamp: d.first.timestamp,
