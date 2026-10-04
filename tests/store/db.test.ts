@@ -97,3 +97,14 @@ test('waits for a busy database instead of failing immediately', () => {
   const db = (store as unknown as { db: DatabaseSync }).db;
   expect(db.prepare('pragma busy_timeout').get()).toEqual({ timeout: 5000 });
 });
+
+test('write transactions take the write lock up front with begin immediate', () => {
+  const store = new Store(':memory:');
+  const db = (store as unknown as { db: DatabaseSync }).db;
+  const statements: string[] = [];
+  const exec = db.exec.bind(db);
+  db.exec = (sql: string) => (statements.push(sql), exec(sql));
+  store.replaceSource('/logs/a.jsonl', [{ event: ev('a'), findings: [] }]);
+  store.saveEvent(ev('b'), []);
+  expect(statements.filter((s) => s.startsWith('begin'))).toEqual(['begin immediate', 'begin immediate']);
+});

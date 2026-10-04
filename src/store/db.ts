@@ -191,7 +191,7 @@ export class Store {
   }
 
   private tx(fn: () => void): void {
-    this.db.exec('begin');
+    this.db.exec('begin immediate');
     try {
       fn();
       this.db.exec('commit');
