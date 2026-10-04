@@ -30,6 +30,13 @@ test('text report empty state hints at scan', () => {
   expect(renderText([])).toContain('ngcoach scan');
 });
 
+test('empty state says when filters excluded every prompt', () => {
+  expect(renderText([], { filtered: true })).toBe('No prompts matched the filters.\n');
+  const html = renderHtml([], { filtered: true });
+  expect(html).toContain('No prompts matched the filters.');
+  expect(html).not.toContain('ngcoach scan');
+});
+
 test('json report is machine readable', () => {
   const parsed = JSON.parse(renderJson(ranked));
   expect(parsed.prompts[0]).toMatchObject({ id: 'e1', score: 5, agent: 'cursor', findings: [{ ruleId: 'ng/control-flow' }] });

@@ -3,8 +3,16 @@ import type { Ranked } from './score.js';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-export function renderText(ranked: Ranked[]): string {
+export interface RenderOptions {
+  /** The database has prompts, but the report filters excluded all of them. */
+  filtered?: boolean;
+}
+
+const FILTERED = 'No prompts matched the filters.';
+
+export function renderText(ranked: Ranked[], opts: RenderOptions = {}): string {
   if (ranked.length === 0) {
+    if (opts.filtered) return `${FILTERED}\n`;
     return 'No prompts to coach yet. Run `ngcoach scan` to import your agent history, then `ngcoach report`.\n';
   }
   const lines: string[] = [`Top ${ranked.length} prompts to improve`, ''];
@@ -29,7 +37,7 @@ export function renderJson(ranked: Ranked[]): string {
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-export function renderHtml(ranked: Ranked[]): string {
+export function renderHtml(ranked: Ranked[], opts: RenderOptions = {}): string {
   const cards = ranked
     .map(({ event: e, score }) => {
       const findings = e.findings
@@ -46,7 +54,8 @@ export function renderHtml(ranked: Ranked[]): string {
       return `<section><p class="meta">${esc(e.agent)} · ${esc(e.timestamp.slice(0, 10))} · ${esc(e.repo ?? '(no repo)')} · score ${score}</p><pre>${esc(e.text)}</pre>${follow}<ol>${findings}</ol></section>`;
     })
     .join('\n');
-  const body = cards || '<p>No prompts to coach yet. Run <code>ngcoach scan</code>.</p>';
+  const empty = opts.filtered ? `<p>${FILTERED}</p>` : '<p>No prompts to coach yet. Run <code>ngcoach scan</code>.</p>';
+  const body = cards || empty;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>ngcoach report</title>
 <style>

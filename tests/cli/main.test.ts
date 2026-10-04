@@ -44,13 +44,18 @@ test('report text, html file and filters', () => {
 
   out = [];
   expect(run('report', '--agent', 'cursor')).toBe(0);
-  expect(out.join('')).toContain('ngcoach scan');
+  expect(out.join('')).toBe('No prompts matched the filters.\n');
 
   const file = join(env.NGCOACH_HOME!, 'report.html');
   out = [];
   expect(run('report', '--html', file)).toBe(0);
   expect(readFileSync(file, 'utf8')).toContain('ng/control-flow');
   expect(out.join('')).toContain(file);
+});
+
+test('an empty database still hints at scan even with filters', () => {
+  expect(run('report', '--agent', 'cursor')).toBe(0);
+  expect(out.join('')).toContain('ngcoach scan');
 });
 
 test('rebuild re-reads everything', () => {

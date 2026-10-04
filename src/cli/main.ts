@@ -81,13 +81,14 @@ function cmdReport(args: string[], write: Write, env: Env): number {
   try {
     const events = store.listEvents({ repo, agent: values.agent as AgentId | undefined, since });
     const ranked = rankEvents(events, limit);
+    const filtered = events.length === 0 && store.countEvents() > 0;
     if (values.html) {
-      writeFileSync(values.html, renderHtml(ranked));
+      writeFileSync(values.html, renderHtml(ranked, { filtered }));
       write(`Wrote ${values.html}\n`);
     } else if (values.json) {
       write(`${renderJson(ranked)}\n`);
     } else {
-      write(renderText(ranked));
+      write(renderText(ranked, { filtered }));
     }
     return 0;
   } finally {
