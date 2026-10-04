@@ -71,6 +71,7 @@ function cmdReport(args: string[], write: Write, env: Env): number {
   if (values.agent !== undefined && !AGENTS.includes(values.agent as AgentId)) {
     throw new UsageError(`Invalid --agent "${values.agent}". Use one of: ${AGENTS.join(', ')}.`);
   }
+  if (values.json && values.html !== undefined) throw new UsageError('Use either --json or --html, not both.');
   const limit = values.limit === undefined ? 10 : Number(values.limit);
   if (!Number.isInteger(limit) || limit < 1) throw new UsageError(`Invalid --limit "${values.limit}".`);
   const since = parseSince(values.since, new Date());

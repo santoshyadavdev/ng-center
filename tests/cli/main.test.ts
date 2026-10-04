@@ -87,6 +87,9 @@ test('bad input exits with 2 and usage', () => {
   out = [];
   expect(run('report', '--agent', 'vim')).toBe(2);
   out = [];
+  expect(run('report', '--json', '--html', join(env.NGCOACH_HOME!, 'x.html'))).toBe(2);
+  expect(out.join('')).toMatch(/--json.*--html/);
+  out = [];
   expect(run('help')).toBe(0);
   expect(out.join('')).toContain('Usage: ngcoach');
 });
