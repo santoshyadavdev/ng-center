@@ -42,3 +42,12 @@ test('isNoise flags Claude interruption markers', () => {
   expect(isNoise('[Request interrupted by user]')).toBe(true);
   expect(isNoise('[Request interrupted by user for tool use]')).toBe(true);
 });
+
+test('isNoise flags long markdown-H1 skill templates only', () => {
+  const body = 'Follow these steps carefully when preparing the change.\n'.repeat(30);
+  expect(isNoise(`# Pull Request Creation\n\n${body}`)).toBe(true);
+  expect(isNoise('# Bug\nThe cart total is wrong when a coupon is applied')).toBe(false);
+  expect(isNoise(`Please review this:\n${body}`)).toBe(false);
+  expect(isNoise(`## Context\n${body}`)).toBe(false);
+  expect(isNoise(`#ngIf is not rendering\n${body}`)).toBe(false);
+});
