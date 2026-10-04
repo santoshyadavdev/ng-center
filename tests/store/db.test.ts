@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { expect, test } from 'vitest';
 import type { Finding, PromptEvent } from '../../src/core/index.js';
 import { Store } from '../../src/store/index.js';
@@ -61,4 +62,32 @@ test('checkpoints, adapter stats and clear', () => {
   expect(store.listEvents()).toEqual([]);
   expect(store.getCheckpoint('/a.jsonl')).toBeNull();
   expect(store.listAdapterStats()).toEqual([]);
+});
+
+test('replaceSource swaps all events and findings of one source', () => {
+  const store = new Store(':memory:');
+  store.replaceSource('/a.jsonl', [
+    { event: ev('a1'), findings: [finding] },
+    { event: ev('a2'), findings: [finding] },
+  ]);
+  store.replaceSource('/b.jsonl', [{ event: ev('b1'), findings: [] }]);
+  store.saveEvent(ev('loose'), []);
+
+  store.replaceSource('/a.jsonl', [{ event: ev('a1', { text: 'edited' }), findings: [] }]);
+
+  const events = store.listEvents();
+  expect(events.map((e) => e.id).sort()).toEqual(['a1', 'b1', 'loose']);
+  expect(events.find((e) => e.id === 'a1')).toMatchObject({ text: 'edited', findings: [] });
+});
+
+test('adds the source column to a database created before it existed', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'ngc-store-')), 'old.db');
+  const db = new DatabaseSync(file);
+  db.exec(`create table events (id text primary key, agent text not null, session_id text not null, timestamp text not null,
+    repo text, text text not null, follow_ups text not null, outcome text not null)`);
+  db.close();
+  const store = new Store(file);
+  store.replaceSource('/a.jsonl', [{ event: ev('a1'), findings: [] }]);
+  expect(store.listEvents().map((e) => e.id)).toEqual(['a1']);
+  store.close();
 });

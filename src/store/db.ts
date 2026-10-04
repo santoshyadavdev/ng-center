@@ -16,6 +16,11 @@ export interface AdapterStats {
   scannedAt: string;
 }
 
+export interface SourceEntry {
+  event: PromptEvent;
+  findings: Finding[];
+}
+
 export interface EventFilter {
   repo?: string;
   agent?: AgentId;
@@ -31,7 +36,8 @@ const SCHEMA = `
     repo text,
     text text not null,
     follow_ups text not null,
-    outcome text not null
+    outcome text not null,
+    source text
   );
   create table if not exists findings (
     event_id text not null references events(id) on delete cascade,
@@ -71,24 +77,20 @@ export class Store {
     this.db = new DatabaseSync(path);
     this.db.exec('pragma foreign_keys = on;');
     this.db.exec(SCHEMA);
+    const columns = this.db.prepare('pragma table_info(events)').all() as unknown as Array<{ name: string }>;
+    if (!columns.some((c) => c.name === 'source')) this.db.exec('alter table events add column source text;');
+    this.db.exec('create index if not exists events_source on events(source);');
   }
 
-  saveEvent(e: PromptEvent, findings: Finding[]): void {
+  saveEvent(e: PromptEvent, findings: Finding[], source: string | null = null): void {
+    this.tx(() => this.insertEvent(e, findings, source));
+  }
+
+  /** Replace everything previously stored for `source` (events and their findings) with `entries`. */
+  replaceSource(source: string, entries: SourceEntry[]): void {
     this.tx(() => {
-      this.db
-        .prepare(
-          `insert into events (id, agent, session_id, timestamp, repo, text, follow_ups, outcome)
-           values (?, ?, ?, ?, ?, ?, ?, ?)
-           on conflict(id) do update set agent = excluded.agent, session_id = excluded.session_id,
-             timestamp = excluded.timestamp, repo = excluded.repo, text = excluded.text,
-             follow_ups = excluded.follow_ups, outcome = excluded.outcome`,
-        )
-        .run(e.id, e.agent, e.sessionId, e.timestamp, e.repo, e.text, JSON.stringify(e.followUps), e.outcome);
-      this.db.prepare('delete from findings where event_id = ?').run(e.id);
-      const insert = this.db.prepare(
-        'insert into findings (event_id, rule_id, severity, message, evidence) values (?, ?, ?, ?, ?)',
-      );
-      for (const f of findings) insert.run(e.id, f.ruleId, f.severity, f.message, f.evidence);
+      this.db.prepare('delete from events where source = ?').run(source);
+      for (const { event, findings } of entries) this.insertEvent(event, findings, source);
     });
   }
 
@@ -169,6 +171,23 @@ export class Store {
 
   close(): void {
     this.db.close();
+  }
+
+  private insertEvent(e: PromptEvent, findings: Finding[], source: string | null): void {
+    this.db
+      .prepare(
+        `insert into events (id, agent, session_id, timestamp, repo, text, follow_ups, outcome, source)
+         values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         on conflict(id) do update set agent = excluded.agent, session_id = excluded.session_id,
+           timestamp = excluded.timestamp, repo = excluded.repo, text = excluded.text,
+           follow_ups = excluded.follow_ups, outcome = excluded.outcome, source = excluded.source`,
+      )
+      .run(e.id, e.agent, e.sessionId, e.timestamp, e.repo, e.text, JSON.stringify(e.followUps), e.outcome, source);
+    this.db.prepare('delete from findings where event_id = ?').run(e.id);
+    const insert = this.db.prepare(
+      'insert into findings (event_id, rule_id, severity, message, evidence) values (?, ?, ?, ?, ?)',
+    );
+    for (const f of findings) insert.run(e.id, f.ruleId, f.severity, f.message, f.evidence);
   }
 
   private tx(fn: () => void): void {

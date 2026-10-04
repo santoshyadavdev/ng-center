@@ -123,3 +123,25 @@ test('sourceMtime uses the newer of a file and its -wal sibling', () => {
   utimesSync(db, 300, 300);
   expect(sourceMtime(db)).toBe(300_000);
 });
+
+test('a re-read source with fewer events leaves no stale rows', () => {
+  const store = new Store(':memory:');
+  let turns = [
+    turn('a', 0, 'user', 'Angular 20: wrap the list in *ngIf'),
+    turn('a', 1, 'assistant', 'ok'),
+    turn('a', 2, 'user', 'now explain the router setup in this app'),
+  ];
+  const adapter = fakeAdapter({ '/logs/a.jsonl': () => ({ turns, skipped: 0 }) }, []);
+  let mtime = 1;
+  const opts = { store, adapters: [adapter], home: '/home', profile: () => ANGULAR_20, mtime: () => mtime, now: NOW };
+
+  scan(opts);
+  expect(store.listEvents()).toHaveLength(2);
+
+  turns = [turn('a', 0, 'user', 'explain the router setup in this app please')];
+  mtime = 2;
+  scan(opts);
+  const events = store.listEvents();
+  expect(events.map((e) => e.text)).toEqual(['explain the router setup in this app please']);
+  expect(events[0]?.findings).toEqual([]);
+});

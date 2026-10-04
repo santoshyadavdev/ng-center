@@ -70,10 +70,12 @@ export function scan(opts: ScanOptions): ScanResult {
         if (store.getCheckpoint(source) === mtime) continue;
         const read = adapter.read(source);
         skipped += read.skipped;
-        for (const event of buildEvents(read.turns)) {
-          store.saveEvent(event, runRules(event, profileFor(event.repo)));
-          events++;
-        }
+        const entries = buildEvents(read.turns).map((event) => ({
+          event,
+          findings: runRules(event, profileFor(event.repo)),
+        }));
+        store.replaceSource(source, entries);
+        events += entries.length;
         store.setCheckpoint(source, adapter.id, mtime);
       } catch (err) {
         errors.push(`${source}: ${message(err)}`);
