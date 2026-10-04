@@ -10,6 +10,16 @@ Everything stays on your machine. ngcoach never sends prompts anywhere.
 
 Node.js 22.13 or newer (uses the built-in `node:sqlite`).
 
+## Install
+
+ngcoach is not published to npm yet. Build it from a clone:
+
+```bash
+pnpm install && pnpm build && pnpm link --global   # puts `ngcoach` on your PATH
+```
+
+Or skip the link and run `node dist/bin.js <command>` from the clone.
+
 ## Usage
 
 ```bash
@@ -21,6 +31,41 @@ ngcoach doctor            # check which agents were found
 ```
 
 `ngcoach scan --rebuild` re-imports everything, for example after upgrading ngcoach.
+
+### `report` options
+
+| Option | Meaning |
+|---|---|
+| `--repo <path>` | Only prompts from this project. Accepts `.`, relative paths and subdirectories (see below) |
+| `--agent <id>` | Only prompts from `claude-code`, `copilot` or `cursor` |
+| `--since <when>` | Only prompts on or after an ISO date (`2026-10-01`) or within the last N days (`7d`) |
+| `--limit <n>` | How many prompts to show (default 10) |
+| `--json` | Print machine-readable JSON instead of text |
+| `--html <file>` | Write a self-contained HTML report to `<file>` |
+
+`--json` and `--html` cannot be combined. If your filters match nothing, `report` says "No prompts matched the filters."
+
+### How repos are resolved
+
+Each prompt is stored under the project root of the directory the agent ran in, not the raw working directory. So a session started in `src/app` or an Nx `apps/web` folder still counts for the workspace. ngcoach walks up from that directory, stopping before your home dir and the filesystem root:
+
+1. The first folder with a `package.json` that is also an Angular project (`angular.json`, or `@angular/core` in its dependencies) wins, as long as the walk has not gone past a folder containing `.git`.
+2. Otherwise the nearest folder with a `package.json` wins.
+3. Otherwise the original directory is kept.
+
+`--repo` resolves its argument the same way, so `ngcoach report --repo .` works from the project root or any subdirectory. Data scanned by an older ngcoach still uses raw directories; run `ngcoach scan --rebuild` once to re-attribute it.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | `scan`: at least one adapter reported an error (the summary is still printed). `doctor`: a problem was found. Any command: an I/O error such as an unwritable `--html` path, shown as `ngcoach: <message>` |
+| `2` | Invalid usage, such as an unknown command or bad option |
+
+## What gets skipped
+
+Noise is dropped at import: empty turns, tool and system messages, and terminal escape sequences. Long pastes that start with an H1 title (`# Something`) and are over 1500 characters are treated as skill or prompt templates, not your own prompts, and are skipped.
 
 ## What it checks
 
