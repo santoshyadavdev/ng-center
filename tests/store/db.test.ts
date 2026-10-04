@@ -91,3 +91,9 @@ test('adds the source column to a database created before it existed', () => {
   expect(store.listEvents().map((e) => e.id)).toEqual(['a1']);
   store.close();
 });
+
+test('waits for a busy database instead of failing immediately', () => {
+  const store = new Store(':memory:');
+  const db = (store as unknown as { db: DatabaseSync }).db;
+  expect(db.prepare('pragma busy_timeout').get()).toEqual({ timeout: 5000 });
+});

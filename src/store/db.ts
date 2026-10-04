@@ -75,7 +75,7 @@ export class Store {
   constructor(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
-    this.db.exec('pragma foreign_keys = on;');
+    this.db.exec('pragma foreign_keys = on; pragma busy_timeout = 5000;');
     this.db.exec(SCHEMA);
     const columns = this.db.prepare('pragma table_info(events)').all() as unknown as Array<{ name: string }>;
     if (!columns.some((c) => c.name === 'source')) this.db.exec('alter table events add column source text;');
