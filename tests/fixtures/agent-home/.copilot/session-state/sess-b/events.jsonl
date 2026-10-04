@@ -4,3 +4,4 @@
 {"type":"user.message","id":"e3","parentId":"e2","timestamp":"2026-10-02T09:00:30.000Z","data":{"content":"<skill-context>injected</skill-context>","source":"system"}}
 {"type":"user.message","id":"e4","parentId":"e3","timestamp":"2026-10-02T09:00:40.000Z","data":{"content":123,"source":"user"}}
 {"type":"tool.execution_start","id":"e5","parentId":"e4","timestamp":"2026-10-02T09:00:50.000Z","data":{}}
+{"type":"user.message","id":"e6","parentId":"e5","timestamp":"2026-10-02T09:01:00.000Z","data":{"content":"<canvas-context>{\"canvas\":\"chart\"}</canvas-context>","source":"user"}}

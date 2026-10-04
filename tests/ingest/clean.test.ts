@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { cleanText, isNoise } from '../../src/ingest/clean.js';
+import { isCorrection } from '../../src/ingest/events.js';
 
 test('cleanText strips system reminders and trims', () => {
   expect(cleanText('  hi <system-reminder>secret\nstuff</system-reminder> there ')).toBe('hi  there');
@@ -22,4 +23,17 @@ test('isNoise flags agent-generated wrappers and terminal escapes', () => {
   expect(isNoise('\u001b[<65;56;14M<65;57;14m')).toBe(true);
   expect(isNoise('<div> wrapper is not rendering in the header')).toBe(false);
   expect(isNoise('Use <ng-content> for projection')).toBe(false);
+});
+
+test('cleanText strips IDE and canvas context blocks', () => {
+  expect(cleanText('<ide_opened_file>The user opened a.ts</ide_opened_file> no, use signals')).toBe('no, use signals');
+  expect(cleanText('<ide_selection>const a = 1;\n</ide_selection>\nfix this')).toBe('fix this');
+  expect(cleanText('<canvas-context>{"a":1}</canvas-context>')).toBe('');
+  expect(cleanText('Use <canvas-context>{}</canvas-context> the chart')).toBe('Use  the chart');
+  expect(cleanText('<div> wrapper is not rendering')).toBe('<div> wrapper is not rendering');
+  expect(cleanText('<span> is misaligned')).toBe('<span> is misaligned');
+});
+
+test('wrapped corrections are still detected after cleaning', () => {
+  expect(isCorrection(cleanText('<ide_opened_file>x</ide_opened_file> no, use signals'))).toBe(true);
 });
