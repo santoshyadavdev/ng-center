@@ -72,6 +72,10 @@ export function readCursor(source: string): ReadResult {
       const [, composerId, bubbleId] = row.key.split(':');
       if (!composerId || !bubbleId) continue;
       if (headers.get(composerId)?.isSubagent) continue;
+      if (row.value === null || row.value === undefined) {
+        skipped++;
+        continue;
+      }
 
       let raw: unknown;
       try {

@@ -30,6 +30,7 @@ function makeCursorHome(platform: NodeJS.Platform) {
   put.run('bubbleId:c1:b3', JSON.stringify({ type: 1, text: 'no, keep the API', createdAt: Date.parse('2026-10-03T08:01:00.000Z') }));
   put.run('bubbleId:c1:b4', 'not json');
   put.run('bubbleId:c1:b5', JSON.stringify({ type: 'weird' }));
+  put.run('bubbleId:c1:b6', null);
   put.run('bubbleId:c2:b1', JSON.stringify({ type: 1, text: 'subagent', createdAt: '2026-10-03T08:00:00.000Z' }));
   put.run('composerData:c1', '{}');
   db.close();
@@ -48,10 +49,10 @@ test('discovers the global db only when present', () => {
   expect(discoverCursor(home, 'darwin')).toEqual([]);
 });
 
-test('reads ordered bubbles, maps workspace folder, skips subagents and malformed', () => {
+test('reads ordered bubbles, maps workspace folder, skips subagents, malformed and NULL values', () => {
   const { dbFile } = makeCursorHome('linux');
   const { turns, skipped } = readCursor(dbFile);
-  expect(skipped).toBe(2);
+  expect(skipped).toBe(3);
   expect(turns.map((t) => [t.role, t.text, t.index])).toEqual([
     ['user', 'Refactor the cart service', 0],
     ['assistant', 'Sure.', 1],
