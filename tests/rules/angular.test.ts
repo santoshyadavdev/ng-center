@@ -33,3 +33,19 @@ test('messages mention the project version', () => {
   expect(finding?.message).toContain('20.1.0');
   expect(finding?.evidence).toBe('*ngFor');
 });
+
+test.each<[string, string]>([
+  ['migrate every *ngIf to @if', 'ng/control-flow'],
+  ['replace constructor injection with inject()', 'ng/inject-fn'],
+  ['remove NgZone usage', 'ng/zoneless'],
+  ['convert @Input() to input()', 'ng/signal-io'],
+  ['migrate the specs from jest to vitest', 'ng/test-runner'],
+  ['use @if instead of *ngIf everywhere', 'ng/control-flow'],
+  ['refactoring: drop EventEmitter for output()', 'ng/signal-io'],
+])('migration intent suppresses the legacy-API rule: %s', (text, ruleId) => {
+  expect(fired(text, ANGULAR_20)).not.toContain(ruleId);
+});
+
+test('migration words need word boundaries', () => {
+  expect(fired('Angular 20: the unremovable banner needs *ngIf', ANGULAR_20)).toContain('ng/control-flow');
+});

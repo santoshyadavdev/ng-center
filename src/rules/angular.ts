@@ -1,7 +1,19 @@
-import type { Rule, TestRunner } from '../core/index.js';
+import type { ProjectProfile, PromptEvent, Rule, TestRunner } from '../core/index.js';
 import { patternRule } from './pattern-rule.js';
 
+type Match = (text: string, event: PromptEvent, profile: ProjectProfile) => string | null;
+
 const first = (re: RegExp) => (text: string) => text.match(re)?.[0] ?? null;
+
+const MIGRATION_INTENT = /\b(migrat\w*|convert\w*|replac\w*|remov\w*|refactor\w*|upgrad\w*)\b|\binstead of\b/i;
+
+/** True when the prompt asks to move away from an API, so naming the legacy API is the point, not a mistake. */
+export const isMigration = (text: string): boolean => MIGRATION_INTENT.test(text);
+
+const unlessMigrating =
+  (match: Match): Match =>
+  (text, event, profile) =>
+    isMigration(text) ? null : match(text, event, profile);
 
 const RUNNER_WORDS: Record<Exclude<TestRunner, 'none'>, RegExp> = {
   vitest: /\bvitest\b/i,
@@ -15,7 +27,7 @@ export const ANGULAR_RULES: Rule[] = [
     severity: 'warn',
     guidance: 'This project supports built-in control flow. Ask for `@if`, `@for (…; track …)` and `@switch` instead of structural directives.',
     angularRange: '>=17',
-    match: first(/\*ng(If|For|Switch\w*)\b/),
+    match: unlessMigrating(first(/\*ng(If|For|Switch\w*)\b/)),
     message: (ev, p) => `Asked for ${ev}, but Angular ${p.angularVersion} has built-in control flow (@if/@for/@switch).`,
   }),
   patternRule({
@@ -32,7 +44,7 @@ export const ANGULAR_RULES: Rule[] = [
     severity: 'warn',
     guidance: 'Ask for signal-based `input()`, `output()` and `model()` instead of decorators.',
     angularRange: '>=17.1',
-    match: first(/@(Input|Output)\b|\bEventEmitter\b/),
+    match: unlessMigrating(first(/@(Input|Output)\b|\bEventEmitter\b/)),
     message: (ev, p) => `Asked for ${ev}; Angular ${p.angularVersion} has input()/output()/model().`,
   }),
   patternRule({
@@ -40,7 +52,7 @@ export const ANGULAR_RULES: Rule[] = [
     severity: 'info',
     guidance: 'Prefer `inject()` over constructor parameters for dependency injection.',
     angularRange: '>=14',
-    match: first(/\bconstructor (injection|parameters?|DI)\b|\binject\w* (it |them )?(via|in|through) (the )?constructor\b/i),
+    match: unlessMigrating(first(/\bconstructor (injection|parameters?|DI)\b|\binject\w* (it |them )?(via|in|through) (the )?constructor\b/i)),
     message: (_ev, p) => `Angular ${p.angularVersion} supports inject(); constructor injection is the older style.`,
   }),
   patternRule({
@@ -49,7 +61,7 @@ export const ANGULAR_RULES: Rule[] = [
     guidance: 'This app is zoneless. Ask for signal-driven updates; avoid NgZone, zone.js and manual change detection.',
     angularRange: '>=18',
     when: (p) => p.zoneless,
-    match: first(/\b(NgZone|zone\.js|detectChanges|ChangeDetectorRef)\b/),
+    match: unlessMigrating(first(/\b(NgZone|zone\.js|detectChanges|ChangeDetectorRef)\b/)),
     message: (ev, p) => `Mentioned ${ev}, but this Angular ${p.angularVersion} app runs without zone.js.`,
   }),
   patternRule({
@@ -70,14 +82,14 @@ export const ANGULAR_RULES: Rule[] = [
     guidance: 'Ask for tests in the runner this project uses, so the agent does not install a second one.',
     requiresAngular: true,
     when: (p) => p.testRunner !== 'none',
-    match: (text, _event, profile) => {
+    match: unlessMigrating((text, _event, profile) => {
       for (const [runner, re] of Object.entries(RUNNER_WORDS)) {
         if (runner === profile.testRunner) continue;
         const hit = text.match(re)?.[0];
         if (hit) return `${runner}:${hit}`;
       }
       return null;
-    },
+    }),
     message: (ev, p) => `Mentioned ${ev.split(':')[1]}, but this project tests with ${p.testRunner}.`,
   }),
   patternRule({
