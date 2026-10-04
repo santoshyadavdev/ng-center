@@ -50,7 +50,7 @@ function cmdScan(args: string[], write: Write, env: Env): number {
       const line = `${a.adapter.padEnd(12)} ${plural(a.sources, 'source')}  ${plural(a.events, 'event')}  ${a.skipped} skipped`;
       write(`${line}${a.error ? `  error: ${a.error}` : ''}\n`);
     }
-    return 0;
+    return result.adapters.some((a) => a.error) ? 1 : 0;
   } finally {
     store.close();
   }

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -121,4 +121,14 @@ test('I/O errors print one ngcoach: line and exit 1', () => {
   const text = out.join('');
   expect(text).toMatch(/^ngcoach: .*ENOENT.*\/nonexistent\/dir\/x\.html.*\n$/);
   expect(text.trim().split('\n')).toHaveLength(1);
+});
+
+test('scan prints the summary and exits 1 when an adapter reports an error', () => {
+  const bad = join(env.NGCOACH_AGENT_HOME!, '.claude', 'projects', '-work-ng20', 'locked.jsonl');
+  writeFileSync(bad, '');
+  chmodSync(bad, 0o000);
+  expect(run('scan')).toBe(1);
+  const text = out.join('');
+  expect(text).toMatch(/claude-code\s+2 sources\s+1 event\s+0 skipped\s+error: .*locked\.jsonl/);
+  expect(text).toMatch(/copilot\s+/);
 });
