@@ -1,5 +1,5 @@
 import { existsSync, statSync } from 'node:fs';
-import { buildProfile, EMPTY_PROFILE } from '../context/index.js';
+import { buildProfile, EMPTY_PROFILE, projectRoot } from '../context/index.js';
 import type { ProjectProfile } from '../core/index.js';
 import { buildEvents, type Adapter } from '../ingest/index.js';
 import { runRules } from '../rules/index.js';
@@ -11,6 +11,8 @@ export interface ScanOptions {
   home: string;
   rebuild?: boolean;
   profile?: (repo: string) => ProjectProfile;
+  /** Maps an event's working directory to the project root stored as its `repo`. */
+  root?: (cwd: string) => string;
   mtime?: (source: string) => number;
   now?: () => Date;
 }
@@ -31,6 +33,7 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 export function scan(opts: ScanOptions): ScanResult {
   const { store, adapters, home } = opts;
   const profileOf = opts.profile ?? buildProfile;
+  const rootOf = opts.root ?? ((cwd: string) => projectRoot(cwd));
   const mtimeOf = opts.mtime ?? sourceMtime;
   const now = opts.now ?? (() => new Date());
 
@@ -51,6 +54,21 @@ export function scan(opts: ScanOptions): ScanResult {
     return p;
   };
 
+  const roots = new Map<string, string>();
+  const rootFor = (cwd: string | null): string | null => {
+    if (!cwd) return cwd;
+    let r = roots.get(cwd);
+    if (r === undefined) {
+      try {
+        r = rootOf(cwd);
+      } catch {
+        r = cwd;
+      }
+      roots.set(cwd, r);
+    }
+    return r;
+  };
+
   const results: AdapterStats[] = [];
   for (const adapter of adapters) {
     const errors: string[] = [];
@@ -69,10 +87,10 @@ export function scan(opts: ScanOptions): ScanResult {
         const mtime = mtimeOf(source);
         if (store.getCheckpoint(source) === mtime) continue;
         const read = adapter.read(source);
-        const entries = buildEvents(read.turns).map((event) => ({
-          event,
-          findings: runRules(event, profileFor(event.repo)),
-        }));
+        const entries = buildEvents(read.turns).map((built) => {
+          const event = { ...built, repo: rootFor(built.repo) };
+          return { event, findings: runRules(event, profileFor(event.repo)) };
+        });
         store.replaceSource(source, entries);
         store.setCheckpoint(source, adapter.id, mtime);
         events += entries.length;

@@ -1,6 +1,7 @@
 import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
 import type { ProjectProfile, RawTurn } from '../../src/core/index.js';
 import type { Adapter } from '../../src/ingest/index.js';
@@ -192,4 +193,53 @@ test('a failure saving adapter stats does not abort the remaining adapters', () 
     ['claude-code', null],
   ]);
   expect(store.listEvents()).toHaveLength(1);
+});
+
+test('a session started in a subdirectory is stored and profiled under its project root', () => {
+  const ng20 = fileURLToPath(new URL('../fixtures/repos/ng20-standalone', import.meta.url));
+  const store = new Store(':memory:');
+  const sub = (t: RawTurn): RawTurn => ({ ...t, cwd: join(ng20, 'src', 'app') });
+  const adapter = fakeAdapter(
+    { '/logs/a.jsonl': () => ({ turns: [sub(turn('a', 0, 'user', 'Angular 20: wrap the list in *ngIf')), sub(turn('a', 1, 'assistant', 'ok'))], skipped: 0 }) },
+    [],
+  );
+
+  scan({ store, adapters: [adapter], home: '/home', mtime: () => 1, now: NOW });
+
+  const [event] = store.listEvents();
+  expect(event?.repo).toBe(ng20);
+  expect(event?.findings.map((f) => f.ruleId)).toEqual(['ng/control-flow']);
+});
+
+test('resolves each cwd to a root once per scan and keeps a null cwd as is', () => {
+  const store = new Store(':memory:');
+  const lookups: string[] = [];
+  const profiles: string[] = [];
+  const adapter = fakeAdapter(
+    {
+      '/logs/a.jsonl': () => ({
+        turns: [turn('a', 0, 'user', 'explain the router setup here'), turn('a', 1, 'assistant', 'ok'), turn('a', 2, 'user', 'and the guards too please')],
+        skipped: 0,
+      }),
+      '/logs/b.jsonl': () => ({
+        turns: [turn('b', 0, 'user', 'explain the forms setup here'), { ...turn('c', 0, 'user', 'no cwd for this prompt'), cwd: null }],
+        skipped: 0,
+      }),
+    },
+    [],
+  );
+
+  scan({
+    store,
+    adapters: [adapter],
+    home: '/home',
+    mtime: () => 1,
+    now: NOW,
+    root: (cwd) => (lookups.push(cwd), '/work'),
+    profile: (repo) => (profiles.push(repo), ANGULAR_20),
+  });
+
+  expect(lookups).toEqual(['/work/app']);
+  expect(profiles).toEqual(['/work']);
+  expect(store.listEvents().map((e) => e.repo).sort()).toEqual(['/work', '/work', '/work', null]);
 });
