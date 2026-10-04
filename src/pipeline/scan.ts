@@ -1,4 +1,4 @@
-import { statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { buildProfile, EMPTY_PROFILE } from '../context/index.js';
 import type { ProjectProfile } from '../core/index.js';
 import { buildEvents, type Adapter } from '../ingest/index.js';
@@ -19,12 +19,19 @@ export interface ScanResult {
   adapters: AdapterStats[];
 }
 
+/** Change time of a source, including an SQLite `-wal` sibling whose writes are not yet checkpointed. */
+export function sourceMtime(source: string): number {
+  const main = statSync(source).mtimeMs;
+  const wal = `${source}-wal`;
+  return existsSync(wal) ? Math.max(main, statSync(wal).mtimeMs) : main;
+}
+
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 export function scan(opts: ScanOptions): ScanResult {
   const { store, adapters, home } = opts;
   const profileOf = opts.profile ?? buildProfile;
-  const mtimeOf = opts.mtime ?? ((source: string) => statSync(source).mtimeMs);
+  const mtimeOf = opts.mtime ?? sourceMtime;
   const now = opts.now ?? (() => new Date());
 
   if (opts.rebuild) store.clear();

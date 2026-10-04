@@ -1,7 +1,10 @@
+import { mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, test } from 'vitest';
 import type { ProjectProfile, RawTurn } from '../../src/core/index.js';
 import type { Adapter } from '../../src/ingest/index.js';
-import { scan } from '../../src/pipeline/scan.js';
+import { scan, sourceMtime } from '../../src/pipeline/scan.js';
 import { Store } from '../../src/store/index.js';
 import { ANGULAR_20 } from '../rules/helpers.js';
 
@@ -104,4 +107,19 @@ test('an adapter whose discover throws is reported and others still run', () => 
     ['cursor', 'discover: no access', 0],
     ['claude-code', null, 1],
   ]);
+});
+
+test('sourceMtime uses the newer of a file and its -wal sibling', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ngc-wal-'));
+  const db = join(dir, 'state.vscdb');
+  writeFileSync(db, '');
+  utimesSync(db, 100, 100);
+  expect(sourceMtime(db)).toBe(100_000);
+
+  writeFileSync(`${db}-wal`, '');
+  utimesSync(`${db}-wal`, 200, 200);
+  expect(sourceMtime(db)).toBe(200_000);
+
+  utimesSync(db, 300, 300);
+  expect(sourceMtime(db)).toBe(300_000);
 });
