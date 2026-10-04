@@ -1,0 +1,5 @@
+{
+  "name": "ng20",
+  "dependencies": { "@angular/core": "^20.1.0", "@angular/ssr": "^20.1.0" },
+  "devDependencies": { "vitest": "^3.2.0" }
+}
