@@ -25,6 +25,10 @@ describe('isCorrection', () => {
   ])('%s -> %s', (text, expected) => {
     expect(isCorrection(text)).toBe(expected);
   });
+
+  test('accepts typographic apostrophes', () => {
+    expect(isCorrection('don’t use NgModule')).toBe(true);
+  });
 });
 
 describe('buildEvents', () => {

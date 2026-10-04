@@ -1,7 +1,7 @@
 import { stableId, type Outcome, type PromptEvent, type RawTurn } from '../core/index.js';
 
 const CORRECTION =
-  /^\s*(no\b|nope\b|don'?t\b|do not\b|instead\b|actually\b|wrong\b|still\b|stop\b|that'?s (not|wrong)|it (didn'?t|doesn'?t|still)|not (what|like)|why did you)|\buse .+ instead\b|\bthat (broke|failed)\b/i;
+  /^\s*(no\b|nope\b|don['’]?t\b|do not\b|instead\b|actually\b|wrong\b|still\b|stop\b|that['’]?s (not|wrong)|it (didn['’]?t|doesn['’]?t|still)|not (what|like)|why did you)|\buse .+ instead\b|\bthat (broke|failed)\b/i;
 
 export function isCorrection(text: string): boolean {
   return CORRECTION.test(text);
