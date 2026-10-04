@@ -65,7 +65,7 @@ Each prompt is stored under the project root of the directory the agent ran in, 
 
 ## What gets skipped
 
-Noise is dropped at import: empty turns, tool and system messages, and terminal escape sequences. Long pastes that start with an H1 title (`# Something`) and are over 1500 characters are treated as skill or prompt templates, not your own prompts, and are skipped.
+Noise is dropped at import: empty turns, slash-command output, injected system notifications, interruptions and terminal escape sequences. Long pastes that start with an H1 title (`# Something`) and are over 1500 characters are treated as skill or prompt templates, not your own prompts, and are skipped.
 
 ## What it checks
 
