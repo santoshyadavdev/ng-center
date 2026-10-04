@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,7 +49,7 @@ function tmpRepo(coreSpec: string, installed?: string): string {
   return dir;
 }
 
-test.each(['catalog:', 'workspace:*', 'latest', 'next'])('non-semver spec %s falls back to the installed version', (spec) => {
+test.each(['catalog:', 'workspace:*', 'latest', 'next', 'github:angular/core#v3'])('non-semver spec %s falls back to the installed version', (spec) => {
   expect(buildProfile(tmpRepo(spec, '20.0.3'))).toMatchObject({ angularVersion: '20.0.3', signals: true });
 });
 
@@ -65,4 +65,13 @@ test('non-semver spec without node_modules still records Angular with an unknown
 
 test('signal detection ignores HTML templates such as <input (keyup)=…>', () => {
   expect(buildProfile(repo('ng16-modules')).signals).toBe(false);
+});
+
+test.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('unreadable angular.json and source files do not abort profiling', () => {
+  const dir = tmpRepo('^20.1.0');
+  writeFileSync(join(dir, 'angular.json'), '{}');
+  writeFileSync(join(dir, 'src', 'locked.ts'), 'x');
+  chmodSync(join(dir, 'angular.json'), 0o000);
+  chmodSync(join(dir, 'src', 'locked.ts'), 0o000);
+  expect(buildProfile(dir)).toMatchObject({ angularVersion: '20.1.0', signals: true });
 });

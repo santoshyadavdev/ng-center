@@ -13,5 +13,5 @@ test('paths honour env overrides', () => {
   const env = { NGCOACH_HOME: '/tmp/ngc', NGCOACH_AGENT_HOME: '/tmp/agents' };
   expect(ngcoachHome(env)).toBe('/tmp/ngc');
   expect(agentHome(env)).toBe('/tmp/agents');
-  expect(dbPath(env)).toBe('/tmp/ngc/ngcoach.db');
+  expect(dbPath(env)).toBe(join('/tmp/ngc', 'ngcoach.db'));
 });

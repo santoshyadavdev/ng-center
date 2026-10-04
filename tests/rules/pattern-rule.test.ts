@@ -23,6 +23,7 @@ test('fires with evidence and a dynamic message', () => {
 test('respects the Angular version range and unknown versions', () => {
   expect(rule.check(event('use *ngIf here'), ANGULAR_16)).toBeNull();
   expect(rule.check(event('use *ngIf here'), EMPTY)).toBeNull();
+  expect(rule.check(event('use *ngIf here'), { ...ANGULAR_20, angularVersion: 'unknown' })).toBeNull();
 });
 
 test('respects requiresAngular and when()', () => {

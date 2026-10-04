@@ -35,7 +35,11 @@ class UsageError extends Error {}
 function parseSince(value: string | undefined, now: Date): string | undefined {
   if (value === undefined) return undefined;
   const days = /^(\d+)d$/.exec(value);
-  if (days) return new Date(now.getTime() - Number(days[1]) * 86_400_000).toISOString();
+  if (days) {
+    const since = new Date(now.getTime() - Number(days[1]) * 86_400_000);
+    if (Number.isNaN(since.getTime())) throw new UsageError(`Invalid --since "${value}": too many days.`);
+    return since.toISOString();
+  }
   const date = new Date(value);
   if (/^\d{4}-\d{2}-\d{2}/.test(value) && !Number.isNaN(date.getTime())) return date.toISOString();
   throw new UsageError(`Invalid --since "${value}". Use an ISO date (2026-10-01) or days (7d).`);

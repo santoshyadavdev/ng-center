@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import semver from 'semver';
 import type { ProjectProfile, TestRunner } from '../core/index.js';
@@ -22,6 +22,14 @@ const CONTROL_FLOW = /@(if|for|switch)\s*\(/;
 const ZONELESS_PROVIDER = /provide(Experimental)?ZonelessChangeDetection/;
 const NG_MODULE = /@NgModule\s*\(/;
 
+function readText(file: string): string {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
+}
+
 function readJson(file: string): Record<string, unknown> | null {
   try {
     return JSON.parse(readFileSync(file, 'utf8'));
@@ -42,11 +50,11 @@ export function buildProfile(repo: string): ProjectProfile {
   if (!core) return { ...EMPTY_PROFILE };
   const installed = readJson(join(repo, 'node_modules', '@angular', 'core', 'package.json'))?.version;
   const angularVersion =
-    semver.coerce(core)?.version ??
+    (semver.validRange(core) ? semver.coerce(core)?.version : null) ??
     (typeof installed === 'string' ? semver.valid(semver.coerce(installed)) : null) ??
     ANGULAR_VERSION_UNKNOWN;
 
-  const angularJson = existsSync(join(repo, 'angular.json')) ? readFileSync(join(repo, 'angular.json'), 'utf8') : '';
+  const angularJson = readText(join(repo, 'angular.json'));
   let testRunner: TestRunner = 'none';
   if (deps.vitest || angularJson.includes('@angular/build:unit-test')) testRunner = 'vitest';
   else if (deps.jest) testRunner = 'jest';
@@ -57,7 +65,7 @@ export function buildProfile(repo: string): ProjectProfile {
   let controlFlow = false;
   let zonelessProvider = false;
   for (const file of listFiles(join(repo, 'src'), (n) => /\.(ts|html)$/.test(n), 2000)) {
-    const text = readFileSync(file, 'utf8');
+    const text = readText(file);
     ngModule ||= NG_MODULE.test(text);
     signals ||= file.endsWith('.ts') && SIGNAL_API.test(text);
     controlFlow ||= CONTROL_FLOW.test(text);

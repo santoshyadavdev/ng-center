@@ -53,5 +53,5 @@ test('does not prefer an Angular ancestor beyond a .git boundary', () => {
 test('stops at the home dir and keeps the original cwd when no package.json is found', () => {
   const home = tree({ 'package.json': angularPkg, 'notes/deep/': '' });
   expect(projectRoot(join(home, 'notes/deep'), home)).toBe(join(home, 'notes/deep'));
-  expect(projectRoot('/definitely/not/here')).toBe('/definitely/not/here');
+  expect(projectRoot('/definitely/not/here', '/definitely')).toBe('/definitely/not/here');
 });

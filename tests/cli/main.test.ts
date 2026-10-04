@@ -85,6 +85,9 @@ test('bad input exits with 2 and usage', () => {
   expect(run('report', '--since', 'yesterday')).toBe(2);
   expect(out.join('')).toContain('--since');
   out = [];
+  expect(run('report', '--since', '99999999999999d')).toBe(2);
+  expect(out.join('')).toContain('--since');
+  out = [];
   expect(run('report', '--agent', 'vim')).toBe(2);
   out = [];
   expect(run('report', '--json', '--html', join(env.NGCOACH_HOME!, 'x.html'))).toBe(2);
@@ -123,7 +126,9 @@ test('I/O errors print one ngcoach: line and exit 1', () => {
   expect(text.trim().split('\n')).toHaveLength(1);
 });
 
-test('scan prints the summary and exits 1 when an adapter reports an error', () => {
+const cannotLockFiles = process.platform === 'win32' || process.getuid?.() === 0;
+
+test.skipIf(cannotLockFiles)('scan prints the summary and exits 1 when an adapter reports an error', () => {
   const bad = join(env.NGCOACH_AGENT_HOME!, '.claude', 'projects', '-work-ng20', 'locked.jsonl');
   writeFileSync(bad, '');
   chmodSync(bad, 0o000);
