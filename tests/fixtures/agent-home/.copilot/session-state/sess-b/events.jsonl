@@ -1,0 +1,6 @@
+{"type":"session.start","id":"e0","parentId":null,"timestamp":"2026-10-02T09:00:00.000Z","data":{"sessionId":"sess-b","context":{"cwd":"/work/admin","gitRoot":"/work/admin","branch":"main"}}}
+{"type":"user.message","id":"e1","parentId":"e0","timestamp":"2026-10-02T09:00:10.000Z","data":{"content":"Add a login form","source":"user"}}
+{"type":"assistant.message","id":"e2","parentId":"e1","timestamp":"2026-10-02T09:00:20.000Z","data":{"content":"Added LoginComponent."}}
+{"type":"user.message","id":"e3","parentId":"e2","timestamp":"2026-10-02T09:00:30.000Z","data":{"content":"<skill-context>injected</skill-context>","source":"system"}}
+{"type":"user.message","id":"e4","parentId":"e3","timestamp":"2026-10-02T09:00:40.000Z","data":{"content":123,"source":"user"}}
+{"type":"tool.execution_start","id":"e5","parentId":"e4","timestamp":"2026-10-02T09:00:50.000Z","data":{}}
