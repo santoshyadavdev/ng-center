@@ -17,6 +17,7 @@ const AssistantMessage = z.object({ content: z.string().default('') });
 export function readCopilot(source: string): ReadResult {
   let sessionId = basename(dirname(source));
   let cwd: string | null = null;
+  let resumeCwd: string | null = null;
   const pending: Array<Omit<RawTurn, 'sessionId' | 'cwd'>> = [];
   let skipped = 0;
 
@@ -46,6 +47,13 @@ export function readCopilot(source: string): ReadResult {
         }
         sessionId = s.data.sessionId ?? sessionId;
         cwd = s.data.context?.cwd ?? cwd;
+      } else if (type === 'session.resume') {
+        const r = SessionStart.safeParse(data);
+        if (!r.success) {
+          skipped++;
+          return;
+        }
+        resumeCwd ??= r.data.context?.cwd ?? null;
       } else if (type === 'user.message') {
         const m = UserMessage.safeParse(data);
         if (!m.success) {
@@ -66,7 +74,8 @@ export function readCopilot(source: string): ReadResult {
       }
     });
 
-  return { turns: pending.map((t) => ({ ...t, sessionId, cwd })), skipped };
+  const sessionCwd = cwd ?? resumeCwd;
+  return { turns: pending.map((t) => ({ ...t, sessionId, cwd: sessionCwd })), skipped };
 }
 
 export const copilot: Adapter = {
