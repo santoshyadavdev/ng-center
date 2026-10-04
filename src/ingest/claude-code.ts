@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { z } from 'zod';
 import type { RawTurn } from '../core/index.js';
 import type { Adapter, ReadResult } from './adapter.js';
@@ -70,6 +70,9 @@ export function readClaudeCode(source: string): ReadResult {
 
 export const claudeCode: Adapter = {
   id: 'claude-code',
-  discover: (home) => listFiles(join(home, '.claude', 'projects'), (n) => n.endsWith('.jsonl')),
+  discover: (home) => {
+    const root = join(home, '.claude', 'projects');
+    return listFiles(root, (n) => n.endsWith('.jsonl')).filter((f) => !relative(root, f).split(sep).includes('subagents'));
+  },
   read: readClaudeCode,
 };
